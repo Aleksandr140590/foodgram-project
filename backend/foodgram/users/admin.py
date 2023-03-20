@@ -11,6 +11,6 @@ class UserAdmin(admin.ModelAdmin):
         'first_name',
         'last_name',
         'password',
-        'is_blocked'
+        'is_active'
     )
-    list_editable = ('password', 'is_blocked')
+    list_editable = ('password', 'is_active')
