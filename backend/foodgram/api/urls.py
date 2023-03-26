@@ -24,8 +24,8 @@ add_urls = [
 
 
 urlpatterns = [
-    path('', include(router_v1.urls)),
     path('', include(add_urls)),
+    path('', include(router_v1.urls)),
     path('', include('djoser.urls')),  # Работа с пользователями
     path('auth/', include('djoser.urls.authtoken')),  # Работа с токенами
 ]

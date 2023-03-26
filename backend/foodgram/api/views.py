@@ -1,15 +1,17 @@
-from django.db.models import Exists, OuterRef
+from django.db.models import Exists, OuterRef, Value
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
 from djoser.conf import settings
 from djoser.views import UserViewSet
 # from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, mixins, status, viewsets
+from rest_framework import filters, mixins, status, viewsets, permissions
 from rest_framework.decorators import action, api_view, permission_classes
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework.exceptions import PermissionDenied
 
-# from .filters import .
+from .filters import RecipeFilter
 from .permissions import IsAuthor
 from .serializers import (RecipeSerializer, TagSerializer, IngredientSerializer,
                           ShoppingCardSerializer, FavoriteSerializer,
@@ -17,31 +19,40 @@ from .serializers import (RecipeSerializer, TagSerializer, IngredientSerializer,
                           CustomUserSerializer, RecipeInputSerializer)
 from .viewsets import ListRetriveViewSet, ListViewSet
 from recipes.models import (Tag, Ingredient, Recipe, Favorite, ShoppingList,
-                            Follow)
+                            Follow, IngredientInRecipe)
 from users.models import User
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
-#    filter_backends = (DjangoFilterBackend, )
-#    filterset_class = TitleFilter
+    filter_backends = (DjangoFilterBackend, )
+    filterset_class = RecipeFilter
     ordering = ('-pub_date',)
-    permission_classes = (IsAuthor,)
 
     def get_queryset(self):
         user = self.request.user
+        if user.is_authenticated:
+            return Recipe.objects.annotate(
+                is_favorited=Exists(
+                    Favorite.objects.filter(user=user, recipe=OuterRef('pk'))
+                ),
+                is_in_shopping_cart=Exists(
+                    ShoppingList.objects.filter(user=user, recipe=OuterRef('pk'))
+                )
+            ).all()
         return Recipe.objects.annotate(
-            is_favorited=Exists(
-                Favorite.objects.filter(user=user, recipe=OuterRef('pk'))
-            ),
-            is_in_shopping_cart=Exists(
-                ShoppingList.objects.filter(user=user, recipe=OuterRef('pk'))
-            )
+            is_favorited=Value(False),
+            is_in_shopping_cart=Value(False)
         ).all()
 
     def get_serializer_class(self):
         if self.request.method == 'GET':
             return RecipeSerializer
         return RecipeInputSerializer
+
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return (permissions.AllowAny(),)
+        return (permissions.IsAuthenticated(), IsAuthor(),)
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -59,16 +70,42 @@ class TagViewSet(ListRetriveViewSet):
 
 
 class IngredientViewSet(ListRetriveViewSet):
-    queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     pagination_class = None
     ordering = ('id',)
+
+    def get_queryset(self):
+        name_filter = self.request.query_params.get('name')
+        if name_filter:
+            return Ingredient.objects.filter(
+                name__istartswith=name_filter
+            ).all() | Ingredient.objects.filter(
+                name__icontains=name_filter
+            ).all()
+        return Ingredient.objects.all()
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_shopping_card(request):
     # тут формируется файл
-    return Response(status=status.HTTP_200_OK)
+    ingredients = IngredientInRecipe.objects.filter(
+        recipe__recipe_to_shopping__user=request.user
+    )
+    shopping_data = {}
+    for ingredient in ingredients:
+        if str(ingredient.ingredient) in shopping_data:
+            shopping_data[f'{str(ingredient.ingredient)}'] += ingredient.amount
+        else:
+            shopping_data[f'{str(ingredient.ingredient)}'] = ingredient.amount
+    filename = "shopping-list.txt"
+    content = ''
+    for ingredient, amount in shopping_data.items():
+        content += f"{ingredient} - {amount};\n\n"
+    response = HttpResponse(content, content_type='text/plain', status=status.HTTP_200_OK)
+    response['Content-Disposition'] = 'attachment; filename={0}'.format(
+        filename)
+
+    return response
 
 @api_view(["POST", "DELETE"])
 @permission_classes([IsAuthenticated])
@@ -122,6 +159,10 @@ class ListSubscribeViewSet(ListViewSet):
         user = self.request.user
         return user.follower.all()
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["request"] = self.request
+        return context
 
 @api_view(["POST", "DELETE"])
 @permission_classes([IsAuthenticated])
@@ -157,10 +198,13 @@ class CustomUserViewSet(UserViewSet):
     serializer_class = CustomUserSerializer
     queryset = User.objects.all()
 
+
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context["request"] = self.request
         return context
+
+
 
     def get_serializer_class(self):
         if self.action == "create":
@@ -177,5 +221,4 @@ class CustomUserViewSet(UserViewSet):
     @action(["get"], detail=False)
     def me(self, request, *args, **kwargs):
         self.get_object = self.get_instance
-        if request.method == "GET":
-            return self.retrieve(request, *args, **kwargs)
+        return self.retrieve(request, *args, **kwargs)

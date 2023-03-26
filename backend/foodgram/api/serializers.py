@@ -2,9 +2,7 @@ import base64
 import json
 
 from django.core.files.base import ContentFile
-from django.core.serializers import serialize
 from django.forms import model_to_dict
-from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from djoser.serializers import UserSerializer
 
@@ -40,12 +38,12 @@ class TagSerializer(serializers.ModelSerializer):
 
 class IngredientSerializer(serializers.ModelSerializer):
     class Meta:
-        exclude = ('id',)
+        fields = '__all__'
         model = Ingredient
 
 
 class IngredientInRecipeWriteSerializer(serializers.ModelSerializer):
-    id = PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
+    id = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all(), source='ingredient.id')
     name = serializers.ReadOnlyField(source='ingredient.name')
     measurement_unit = serializers.ReadOnlyField(source='ingredient.measurement_unit')
 
@@ -61,13 +59,14 @@ class IngredientInRecipeSerializer(serializers.ModelSerializer):
     name = serializers.ReadOnlyField(source='ingredient.name')
     measurement_unit = serializers.ReadOnlyField(source='ingredient.measurement_unit')
 
-
     class Meta:
         fields = ('id', 'name', 'measurement_unit', 'amount')
         model = IngredientInRecipe
 
+
 class CustomUserSerializer(UserSerializer):
     is_subscribed = serializers.SerializerMethodField()
+
 
     class Meta:
         fields = ('email', 'id', 'username', 'first_name', 'last_name',
@@ -75,9 +74,10 @@ class CustomUserSerializer(UserSerializer):
         model = User
 
     def get_is_subscribed(self, obj):
-        return Follow.objects.filter(user=self.context['request'].user,
-                                     author=obj).exists()
-
+        if self.context['request'].user.is_authenticated:
+            return Follow.objects.filter(user=self.context['request'].user,
+                                         author=obj).exists()
+        return False
 
 
 class RecipeSerializer(serializers.ModelSerializer):
@@ -89,7 +89,7 @@ class RecipeSerializer(serializers.ModelSerializer):
                                                many=True, read_only=True)
 
     class Meta:
-        exclude = ('id', 'pub_date')
+        exclude = ('pub_date', )
         model = Recipe
 
 
@@ -144,8 +144,7 @@ class FollowSerializer(serializers.ModelSerializer):
     first_name = serializers.ReadOnlyField(source='author.first_name')
     last_name = serializers.ReadOnlyField(source='author.last_name')
     is_subscribed = serializers.SerializerMethodField()
-    recipes = ShortRecipeSerializer(source='author.recipes', many=True,
-                                    read_only=True)
+    recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
 
 
@@ -177,6 +176,17 @@ class FollowSerializer(serializers.ModelSerializer):
             )
         return data
 
+    def get_recipes(self, obj):
+        recipes_limit = self.context['request'].query_params.get(
+            'recipes_limit'
+        )
+        queryset = obj.author.recipes.all()
+        if recipes_limit:
+            queryset = queryset[:int(recipes_limit)]
+        serializer = ShortRecipeSerializer(queryset, many=True)
+        return serializer.data
+
+
     def get_is_subscribed(self, obj):
         return Follow.objects.filter(user=self.context['request'].user,
                                      author=obj.author).exists()
@@ -207,7 +217,7 @@ class RecipeInputSerializer(serializers.ModelSerializer):
     image = Base64ImageField()
     ingredients = IngredientInRecipeWriteSerializer(
         many=True,
-        source='ingredientinrecipe_set'
+        source='ingredientinrecipe_set',
     )
 
     class Meta:
@@ -224,13 +234,14 @@ class RecipeInputSerializer(serializers.ModelSerializer):
                                            recipe=obj).exists()
 
     def create(self, validated_data):
+        print(validated_data)
         ingredients = validated_data.pop('ingredientinrecipe_set')
         tags = validated_data.pop('tags')
         recipe = Recipe.objects.create(**validated_data)
         for tag in tags:
             recipe.tags.add(tag)
         for ingredient in ingredients:
-            obj = IngredientInRecipe.objects.create(recipe=recipe, ingredient=ingredient['id'], amount=ingredient['amount'])
+            obj = IngredientInRecipe.objects.create(recipe=recipe, ingredient=ingredient['ingredient']['id'], amount=ingredient['amount'])
             obj.save()
         return recipe
 
@@ -249,8 +260,10 @@ class RecipeInputSerializer(serializers.ModelSerializer):
         instance.ingredients.set([])
         instance.save()
         for ingredient in ingredients:
-            obj = IngredientInRecipe.objects.create(recipe=instance,
-                                                    ingredient=ingredient['id'],
-                                                    amount=ingredient['amount'])
+            obj = IngredientInRecipe.objects.create(
+                recipe=instance,
+                ingredient=ingredient['ingredient']['id'],
+                amount=ingredient['amount']
+            )
             obj.save()
         return instance

@@ -1,6 +1,8 @@
 from django.contrib import admin
+from django.db.models import Count, OuterRef
+from django.shortcuts import get_object_or_404
 
-from recipes.models import Ingredient, Recipe, Tag
+from recipes.models import Ingredient, Recipe, Tag, Favorite
 
 
 class TagsInline(admin.TabularInline):
@@ -13,18 +15,38 @@ class IngredientsInline(admin.TabularInline):
     extra = 3
 
 
+
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     list_display = (
         'id',
         'name',
-        'author'
+        'author',
+        'favorite_count',
     )
     inlines = (
         TagsInline,
         IngredientsInline
     )
-    fields = ('name', 'author', 'image', 'text', 'cooking_time')
+    fields = ('name', 'author', 'image', 'text', 'cooking_time',
+              'favorite_count')
+    readonly_fields = ('favorite_count', )
+    list_filter = ('author', 'name', 'tags')
+
+    def get_queryset(self, request):
+        queryset = Recipe.objects.annotate(
+            favorite_count=Count(
+                Favorite.objects.filter(recipe=OuterRef('pk')).values('id')
+            )
+        )
+        return queryset
+
+    @admin.display(
+        ordering='favorite_count',
+        description='Количество добавлений в избранное',
+    )
+    def favorite_count(self, obj):
+        return obj.favorite_count
 
 @admin.register(Tag)
 class RecipeAdmin(admin.ModelAdmin):
@@ -42,3 +64,4 @@ class RecipeAdmin(admin.ModelAdmin):
         'name',
         'measurement_unit'
     )
+    list_filter = ('name', )
