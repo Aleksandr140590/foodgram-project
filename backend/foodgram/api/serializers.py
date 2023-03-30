@@ -1,24 +1,14 @@
 import base64
-import json
 
 from django.core.files.base import ContentFile
-from django.forms import model_to_dict
-from rest_framework import serializers
 from djoser.serializers import UserSerializer
-
-from recipes.models import (Tag, Ingredient, Recipe, Favorite, ShoppingList,
-                            Follow, IngredientInRecipe)
+from rest_framework import serializers
 from rest_framework.fields import CurrentUserDefault
-from rest_framework.relations import PrimaryKeyRelatedField
+
+from recipes.models import (Favorite, Follow, Ingredient, IngredientInRecipe,
+                            Recipe, ShoppingList, Tag)
 from users.models import User
 
-
-class CustomPrimaryKeyRelatedField(PrimaryKeyRelatedField):
-    def to_representation(self, value):
-        if self.pk_field is not None:
-            return self.pk_field.to_representation(value)
-        dict_obj = model_to_dict(value)
-        return dict_obj
 
 class ShortRecipeSerializer(serializers.ModelSerializer):
     id = serializers.ReadOnlyField()
@@ -29,6 +19,7 @@ class ShortRecipeSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('id', 'name', 'image', 'cooking_time')
         model = Recipe
+
 
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
@@ -43,21 +34,24 @@ class IngredientSerializer(serializers.ModelSerializer):
 
 
 class IngredientInRecipeWriteSerializer(serializers.ModelSerializer):
-    id = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all(), source='ingredient.id')
+    id = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all(),
+                                            source='ingredient.id')
     name = serializers.ReadOnlyField(source='ingredient.name')
-    measurement_unit = serializers.ReadOnlyField(source='ingredient.measurement_unit')
+    measurement_unit = serializers.ReadOnlyField(
+        source='ingredient.measurement_unit'
+    )
 
     class Meta:
         fields = ('id', 'name', 'measurement_unit', 'amount')
         model = IngredientInRecipe
 
 
-
-
 class IngredientInRecipeSerializer(serializers.ModelSerializer):
     id = serializers.ReadOnlyField(source='ingredient.id')
     name = serializers.ReadOnlyField(source='ingredient.name')
-    measurement_unit = serializers.ReadOnlyField(source='ingredient.measurement_unit')
+    measurement_unit = serializers.ReadOnlyField(
+        source='ingredient.measurement_unit'
+    )
 
     class Meta:
         fields = ('id', 'name', 'measurement_unit', 'amount')
@@ -66,7 +60,6 @@ class IngredientInRecipeSerializer(serializers.ModelSerializer):
 
 class CustomUserSerializer(UserSerializer):
     is_subscribed = serializers.SerializerMethodField()
-
 
     class Meta:
         fields = ('email', 'id', 'username', 'first_name', 'last_name',
@@ -91,7 +84,6 @@ class RecipeSerializer(serializers.ModelSerializer):
     class Meta:
         exclude = ('pub_date', )
         model = Recipe
-
 
 
 class ShoppingCardSerializer(serializers.ModelSerializer):
@@ -147,7 +139,6 @@ class FollowSerializer(serializers.ModelSerializer):
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
 
-
     class Meta:
         fields = ('email', 'id', 'username', 'first_name', 'last_name',
                   'is_subscribed', 'recipes', 'recipes_count')
@@ -186,13 +177,13 @@ class FollowSerializer(serializers.ModelSerializer):
         serializer = ShortRecipeSerializer(queryset, many=True)
         return serializer.data
 
-
     def get_is_subscribed(self, obj):
         return Follow.objects.filter(user=self.context['request'].user,
                                      author=obj.author).exists()
 
     def get_recipes_count(self, obj):
         return obj.author.recipes.count()
+
 
 class Base64ImageField(serializers.ImageField):
     def to_internal_value(self, data):
@@ -210,7 +201,7 @@ class RecipeInputSerializer(serializers.ModelSerializer):
     is_in_shopping_cart = serializers.SerializerMethodField()
     author = CustomUserSerializer(
         read_only=True, default=CurrentUserDefault())
-    tags = CustomPrimaryKeyRelatedField(
+    tags = serializers.PrimaryKeyRelatedField(
         queryset=Tag.objects.all(),
         many=True,
     )
@@ -227,22 +218,33 @@ class RecipeInputSerializer(serializers.ModelSerializer):
 
     def get_is_favorited(self, obj):
         return Favorite.objects.filter(user=self.context['request'].user,
-                                     recipe=obj).exists()
+                                       recipe=obj).exists()
 
     def get_is_in_shopping_cart(self, obj):
         return ShoppingList.objects.filter(user=self.context['request'].user,
                                            recipe=obj).exists()
 
+    def to_representation(self, instance):
+        serializer = RecipeSerializer(
+            instance,
+            context={'request': self.context.get('request')}
+        )
+        return serializer.data
+
     def create(self, validated_data):
-        print(validated_data)
         ingredients = validated_data.pop('ingredientinrecipe_set')
         tags = validated_data.pop('tags')
         recipe = Recipe.objects.create(**validated_data)
         for tag in tags:
             recipe.tags.add(tag)
+        datas = []
         for ingredient in ingredients:
-            obj = IngredientInRecipe.objects.create(recipe=recipe, ingredient=ingredient['ingredient']['id'], amount=ingredient['amount'])
-            obj.save()
+            datas.append(IngredientInRecipe(
+                recipe=recipe,
+                ingredient=ingredient['ingredient']['id'],
+                amount=ingredient['amount']
+            ))
+        IngredientInRecipe.objects.bulk_create(datas)
         return recipe
 
     def update(self, instance, validated_data):
@@ -259,11 +261,12 @@ class RecipeInputSerializer(serializers.ModelSerializer):
         instance.tags.set(tags_lst)
         instance.ingredients.set([])
         instance.save()
+        datas = []
         for ingredient in ingredients:
-            obj = IngredientInRecipe.objects.create(
+            datas.append(IngredientInRecipe(
                 recipe=instance,
                 ingredient=ingredient['ingredient']['id'],
                 amount=ingredient['amount']
-            )
-            obj.save()
+            ))
+        IngredientInRecipe.objects.bulk_create(datas)
         return instance

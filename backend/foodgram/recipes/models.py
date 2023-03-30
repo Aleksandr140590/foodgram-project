@@ -29,6 +29,7 @@ class Ingredient(models.Model):
     def __str__(self):
         return f'{self.name}, {self.measurement_unit}'
 
+
 class Recipe(models.Model):
     name = models.CharField('Название рецепта', unique=True, max_length=200)
     author = models.ForeignKey(

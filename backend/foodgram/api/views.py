@@ -4,22 +4,20 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.conf import settings
 from djoser.views import UserViewSet
-# from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, mixins, status, viewsets, permissions
+from rest_framework import status, viewsets, permissions
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied
 
 from .filters import RecipeFilter
 from .permissions import IsAuthor
-from .serializers import (RecipeSerializer, TagSerializer, IngredientSerializer,
-                          ShoppingCardSerializer, FavoriteSerializer,
-                          FollowSerializer,
-                          CustomUserSerializer, RecipeInputSerializer)
+from .serializers import (CustomUserSerializer, FavoriteSerializer,
+                          FollowSerializer, IngredientSerializer, TagSerializer,
+                          RecipeInputSerializer, RecipeSerializer,
+                          ShoppingCardSerializer)
 from .viewsets import ListRetriveViewSet, ListViewSet
-from recipes.models import (Tag, Ingredient, Recipe, Favorite, ShoppingList,
-                            Follow, IngredientInRecipe)
+from recipes.models import (Favorite, Follow, IngredientInRecipe, Ingredient,
+                            Recipe, ShoppingList, Tag)
 from users.models import User
 
 
@@ -36,7 +34,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     Favorite.objects.filter(user=user, recipe=OuterRef('pk'))
                 ),
                 is_in_shopping_cart=Exists(
-                    ShoppingList.objects.filter(user=user, recipe=OuterRef('pk'))
+                    ShoppingList.objects.filter(user=user,
+                                                recipe=OuterRef('pk'))
                 )
             ).all()
         return Recipe.objects.annotate(
@@ -62,6 +61,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         context["request"] = self.request
         return context
 
+
 class TagViewSet(ListRetriveViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
@@ -84,10 +84,10 @@ class IngredientViewSet(ListRetriveViewSet):
             ).all()
         return Ingredient.objects.all()
 
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_shopping_card(request):
-    # тут формируется файл
     ingredients = IngredientInRecipe.objects.filter(
         recipe__recipe_to_shopping__user=request.user
     )
@@ -101,11 +101,12 @@ def get_shopping_card(request):
     content = ''
     for ingredient, amount in shopping_data.items():
         content += f"{ingredient} - {amount};\n\n"
-    response = HttpResponse(content, content_type='text/plain', status=status.HTTP_200_OK)
+    response = HttpResponse(content, content_type='text/plain',
+                            status=status.HTTP_200_OK)
     response['Content-Disposition'] = 'attachment; filename={0}'.format(
         filename)
-
     return response
+
 
 @api_view(["POST", "DELETE"])
 @permission_classes([IsAuthenticated])
@@ -127,6 +128,7 @@ def add_del_shopping_card(request, recipe_id):
             recipe=get_object_or_404(Recipe, id=recipe_id)
         ).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 @api_view(["POST", "DELETE"])
 @permission_classes([IsAuthenticated])
@@ -164,12 +166,13 @@ class ListSubscribeViewSet(ListViewSet):
         context["request"] = self.request
         return context
 
+
 @api_view(["POST", "DELETE"])
 @permission_classes([IsAuthenticated])
 def add_del_subscribe(request, user_id):
     try:
         author = User.objects.get(id=user_id)
-    except:
+    except Exception:
         return Response(status=status.HTTP_404_NOT_FOUND)
     if request.method == "POST":
         serializer = FollowSerializer(
@@ -198,13 +201,10 @@ class CustomUserViewSet(UserViewSet):
     serializer_class = CustomUserSerializer
     queryset = User.objects.all()
 
-
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context["request"] = self.request
         return context
-
-
 
     def get_serializer_class(self):
         if self.action == "create":

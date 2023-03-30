@@ -14,4 +14,3 @@ class IsAuthor(permissions.BasePermission):
                 'У вас не достаточно прав для редактирования!'
             )
         return False
-

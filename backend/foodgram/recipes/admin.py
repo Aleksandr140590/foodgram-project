@@ -1,6 +1,5 @@
 from django.contrib import admin
 from django.db.models import Count, OuterRef
-from django.shortcuts import get_object_or_404
 
 from recipes.models import Ingredient, Recipe, Tag, Favorite
 
@@ -13,7 +12,6 @@ class TagsInline(admin.TabularInline):
 class IngredientsInline(admin.TabularInline):
     model = Recipe.ingredients.through
     extra = 3
-
 
 
 @admin.register(Recipe)
@@ -48,6 +46,7 @@ class RecipeAdmin(admin.ModelAdmin):
     def favorite_count(self, obj):
         return obj.favorite_count
 
+
 @admin.register(Tag)
 class RecipeAdmin(admin.ModelAdmin):
     list_display = (
@@ -56,6 +55,7 @@ class RecipeAdmin(admin.ModelAdmin):
         'color',
         'slug'
     )
+
 
 @admin.register(Ingredient)
 class RecipeAdmin(admin.ModelAdmin):

@@ -1,9 +1,9 @@
 from django.urls import path, include
 from rest_framework import routers
 
-from .views import (RecipeViewSet, TagViewSet, IngredientViewSet,
-                    get_shopping_card, add_del_shopping_card, favorite_view,
-                    ListSubscribeViewSet, add_del_subscribe, CustomUserViewSet)
+from .views import (add_del_shopping_card, add_del_subscribe, CustomUserViewSet,
+                    favorite_view, get_shopping_card, IngredientViewSet,
+                    ListSubscribeViewSet, RecipeViewSet, TagViewSet)
 
 router_v1 = routers.DefaultRouter()
 router_v1.register(r'recipes', RecipeViewSet, basename='recipes')
@@ -26,6 +26,6 @@ add_urls = [
 urlpatterns = [
     path('', include(add_urls)),
     path('', include(router_v1.urls)),
-    path('', include('djoser.urls')),  # Работа с пользователями
-    path('auth/', include('djoser.urls.authtoken')),  # Работа с токенами
+    path('', include('djoser.urls')),
+    path('auth/', include('djoser.urls.authtoken')),
 ]
