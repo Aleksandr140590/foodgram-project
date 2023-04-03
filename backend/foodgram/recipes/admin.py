@@ -64,3 +64,4 @@ class IngredientAdmin(admin.ModelAdmin):
         'measurement_unit'
     )
     list_filter = ('name', )
+    ordering = ('name',)
