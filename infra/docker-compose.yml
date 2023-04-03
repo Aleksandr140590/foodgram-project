@@ -4,11 +4,11 @@ services:
     image: postgres:13.0-alpine
     volumes:
       - ./pg_data/:/var/lib/postgresql/data/
+    env_file:
+      - ./.env
     expose:
       - "5433"
     command: -p 5433
-    env_file:
-      - ./.env
 
   backend:
     image: dodge0000/foodgram:v.0.1
@@ -22,7 +22,7 @@ services:
       - ./.env
 
   frontend:
-    image: dodge0000/foodgram:v.0.1
+    image: dodge0000/frontend-foodgram:v.0.1
     volumes:
       - ./frontend/:/app/result_build/
   nginx:
