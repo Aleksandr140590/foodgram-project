@@ -11,9 +11,7 @@ services:
       - ./.env
 
   backend:
-    build:
-      context: ../backend/foodgram
-      dockerfile: Dockerfile
+    image: dodge0000/foodgram:v.0.1
     restart: always
     volumes:
       - static_value:/app/backend-static/

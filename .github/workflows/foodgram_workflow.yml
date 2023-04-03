@@ -41,7 +41,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          tags: dodge0000/foodgram:v.0.1.
+          tags: dodge0000/foodgram:v.0.1
           context: backend/foodgram/
           file: backend/foodgram/Dockerfile
   deploy:
