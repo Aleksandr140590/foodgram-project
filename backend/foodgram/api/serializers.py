@@ -2,11 +2,10 @@ import base64
 
 from django.core.files.base import ContentFile
 from djoser.serializers import UserSerializer
-from rest_framework import serializers
-from rest_framework.fields import CurrentUserDefault
-
 from recipes.models import (Favorite, Follow, Ingredient, IngredientInRecipe,
                             Recipe, ShoppingList, Tag)
+from rest_framework import serializers
+from rest_framework.fields import CurrentUserDefault
 from users.models import User
 
 
@@ -82,7 +81,7 @@ class RecipeSerializer(serializers.ModelSerializer):
                                                many=True, read_only=True)
 
     class Meta:
-        exclude = ('pub_date', )
+        exclude = ('pub_date',)
         model = Recipe
 
 
@@ -97,11 +96,11 @@ class ShoppingCardSerializer(serializers.ModelSerializer):
         model = ShoppingList
 
     def validate(self, data):
-        if (self.context['request'].method == "POST" and
-                ShoppingList.objects.filter(
+        if (self.context['request'].method == "POST"
+                and ShoppingList.objects.filter(
                     user=self.context['request'].user,
                     recipe_id=self.context['recipe_id']
-                ).exists()):
+        ).exists()):
             raise serializers.ValidationError(
                 'Вы уже добавили в список покупок!'
             )
@@ -119,10 +118,11 @@ class FavoriteSerializer(serializers.ModelSerializer):
         model = Favorite
 
     def validate(self, data):
-        if self.context['request'].method == "POST" and Favorite.objects.filter(
-                user=self.context['request'].user,
-                recipe_id=self.context['recipe_id']
-        ).exists():
+        if (self.context['request'].method == "POST"
+                and Favorite.objects.filter(
+                    user=self.context['request'].user,
+                    recipe_id=self.context['recipe_id']
+        ).exists()):
             raise serializers.ValidationError(
                 'Вы уже добавили в избранное!'
             )
@@ -152,13 +152,14 @@ class FollowSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'Вы уже подписаны на автора!'
             )
-        elif (self.context['request'].method == "POST" and
-              self.context['request'].user.id == self.context['user_id']):
+        if (self.context['request'].method == "POST"
+                and self.context['request'].user.id
+                == self.context['user_id']):
             raise serializers.ValidationError(
                 'Вы не можете подписаться на себя!'
             )
-        elif (self.context['request'].method == "DELETE" and not
-              Follow.objects.filter(
+        if (self.context['request'].method == "DELETE" and not
+            Follow.objects.filter(
                 user=self.context['request'].user,
                 author_id=self.context['user_id']
         ).exists()):
@@ -213,7 +214,7 @@ class RecipeInputSerializer(serializers.ModelSerializer):
 
     class Meta:
         exclude = ('pub_date',)
-        read_only_fields = ('author', )
+        read_only_fields = ('author',)
         model = Recipe
 
     def get_is_favorited(self, obj):

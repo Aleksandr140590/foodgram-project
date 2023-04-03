@@ -1,5 +1,6 @@
-from django.core.management import BaseCommand
 from csv import DictReader
+
+from django.core.management import BaseCommand
 
 from recipes.models import Ingredient
 
@@ -19,5 +20,5 @@ class Command(BaseCommand):
                     measurement_unit=row['measurement_unit']
                 )
                 ingredient.save()
-            except Exception as err:
+            except Exception:
                 continue

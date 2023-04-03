@@ -1,7 +1,6 @@
 from django.contrib import admin
 from django.db.models import Count, OuterRef
-
-from recipes.models import Ingredient, Recipe, Tag, Favorite
+from recipes.models import Favorite, Ingredient, Recipe, Tag
 
 
 class TagsInline(admin.TabularInline):
@@ -32,12 +31,11 @@ class RecipeAdmin(admin.ModelAdmin):
     list_filter = ('author', 'name', 'tags')
 
     def get_queryset(self, request):
-        queryset = Recipe.objects.annotate(
+        return Recipe.objects.annotate(
             favorite_count=Count(
                 Favorite.objects.filter(recipe=OuterRef('pk')).values('id')
             )
         )
-        return queryset
 
     @admin.display(
         ordering='favorite_count',
@@ -48,7 +46,7 @@ class RecipeAdmin(admin.ModelAdmin):
 
 
 @admin.register(Tag)
-class RecipeAdmin(admin.ModelAdmin):
+class TagAdmin(admin.ModelAdmin):
     list_display = (
         'id',
         'name',
@@ -58,7 +56,7 @@ class RecipeAdmin(admin.ModelAdmin):
 
 
 @admin.register(Ingredient)
-class RecipeAdmin(admin.ModelAdmin):
+class IngredientAdmin(admin.ModelAdmin):
     list_display = (
         'id',
         'name',

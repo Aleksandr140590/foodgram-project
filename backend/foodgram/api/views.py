@@ -12,9 +12,9 @@ from rest_framework.response import Response
 from .filters import RecipeFilter
 from .permissions import IsAuthor
 from .serializers import (CustomUserSerializer, FavoriteSerializer,
-                          FollowSerializer, IngredientSerializer, TagSerializer,
-                          RecipeInputSerializer, RecipeSerializer,
-                          ShoppingCardSerializer)
+                          FollowSerializer, IngredientSerializer,
+                          TagSerializer, RecipeInputSerializer,
+                          RecipeSerializer, ShoppingCardSerializer)
 from .viewsets import ListRetriveViewSet, ListViewSet
 from recipes.models import (Favorite, Follow, IngredientInRecipe, Ingredient,
                             Recipe, ShoppingList, Tag)
@@ -122,12 +122,11 @@ def add_del_shopping_card(request, recipe_id):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response("Ошибка введенных данных",
                         status=status.HTTP_400_BAD_REQUEST)
-    if request.method == "DELETE":
-        ShoppingList.objects.get(
-            user=request.user,
-            recipe=get_object_or_404(Recipe, id=recipe_id)
-        ).delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    ShoppingList.objects.get(
+        user=request.user,
+        recipe=get_object_or_404(Recipe, id=recipe_id)
+    ).delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(["POST", "DELETE"])
@@ -144,12 +143,11 @@ def favorite_view(request, recipe_id):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response("Ошибка введенных данных",
                         status=status.HTTP_400_BAD_REQUEST)
-    if request.method == "DELETE":
-        Favorite.objects.get(
-            user=request.user,
-            recipe=get_object_or_404(Recipe, id=recipe_id)
-        ).delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    Favorite.objects.get(
+        user=request.user,
+        recipe=get_object_or_404(Recipe, id=recipe_id)
+    ).delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ListSubscribeViewSet(ListViewSet):
@@ -184,17 +182,16 @@ def add_del_subscribe(request, user_id):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response("Ошибка введенных данных",
                         status=status.HTTP_400_BAD_REQUEST)
-    if request.method == "DELETE":
-        serializer = FollowSerializer(
-            data=request.data,
-            context={'request': request, 'user_id': user_id}
-        )
-        if serializer.is_valid(raise_exception=True):
-            Follow.objects.filter(
-                    user=request.user,
-                    author=author
-            ).delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    serializer = FollowSerializer(
+        data=request.data,
+        context={'request': request, 'user_id': user_id}
+    )
+    if serializer.is_valid(raise_exception=True):
+        Follow.objects.filter(
+            user=request.user,
+            author=author
+        ).delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CustomUserViewSet(UserViewSet):
@@ -211,11 +208,10 @@ class CustomUserViewSet(UserViewSet):
             if settings.USER_CREATE_PASSWORD_RETYPE:
                 return settings.SERIALIZERS.user_create_password_retype
             return settings.SERIALIZERS.user_create
-        elif self.action == "set_password":
+        if self.action == "set_password":
             if settings.SET_PASSWORD_RETYPE:
                 return settings.SERIALIZERS.set_password_retype
             return settings.SERIALIZERS.set_password
-
         return self.serializer_class
 
     @action(["get"], detail=False)

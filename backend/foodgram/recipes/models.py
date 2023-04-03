@@ -1,7 +1,6 @@
+from colorfield.fields import ColorField
 from django.core.validators import MinValueValidator
 from django.db import models
-from colorfield.fields import ColorField
-
 from users.models import User
 
 
@@ -19,7 +18,8 @@ class Tag(models.Model):
 
 
 class Ingredient(models.Model):
-    name = models.CharField('Название ингредиента', unique=True, max_length=200)
+    name = models.CharField('Название ингредиента', unique=True,
+                            max_length=200)
     measurement_unit = models.CharField('Единица измерения', max_length=200)
 
     class Meta:
@@ -41,7 +41,8 @@ class Recipe(models.Model):
         upload_to='backend-media/recipes/images/'
     )
     text = models.TextField('Рецепт')
-    ingredients = models.ManyToManyField(Ingredient, verbose_name="Ингредиенты",
+    ingredients = models.ManyToManyField(Ingredient,
+                                         verbose_name="Ингредиенты",
                                          through='IngredientInRecipe')
     tags = models.ManyToManyField(Tag, verbose_name="Теги")
     cooking_time = models.IntegerField(validators=[
