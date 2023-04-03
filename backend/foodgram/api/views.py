@@ -78,8 +78,8 @@ class IngredientViewSet(ListRetriveViewSet):
         name_filter = self.request.query_params.get('name')
         if name_filter:
             return Ingredient.objects.filter(
-                Q(name__istartswith=name_filter) |
-                Q(name__icontains=name_filter)
+                Q(name__istartswith=name_filter)
+                | Q(name__icontains=name_filter)
             ).all()
         return Ingredient.objects.all()
 
