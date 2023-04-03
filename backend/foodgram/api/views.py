@@ -85,7 +85,7 @@ class IngredientViewSet(ListRetriveViewSet):
             queryset2 = Ingredient.objects.filter(
                 name__icontains=name_filter
             ).all()
-            return list(chain(queryset1, queryset2))
+            return chain(queryset1, queryset2)
         return Ingredient.objects.all()
 
 
