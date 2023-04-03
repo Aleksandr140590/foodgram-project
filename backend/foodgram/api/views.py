@@ -1,6 +1,4 @@
-from itertools import chain
-
-from django.db.models import Exists, OuterRef, Value
+from django.db.models import Exists, OuterRef, Value, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -79,13 +77,10 @@ class IngredientViewSet(ListRetriveViewSet):
     def get_queryset(self):
         name_filter = self.request.query_params.get('name')
         if name_filter:
-            queryset1 = Ingredient.objects.filter(
-                name__istartswith=name_filter
+            return Ingredient.objects.filter(
+                Q(name__istartswith=name_filter) |
+                Q(name__icontains=name_filter)
             ).all()
-            queryset2 = Ingredient.objects.filter(
-                name__icontains=name_filter
-            ).all()
-            return chain(queryset1, queryset2)
         return Ingredient.objects.all()
 
 
