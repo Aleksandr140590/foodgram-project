@@ -3,9 +3,13 @@ services:
   db:
     image: postgres:13.0-alpine
     volumes:
-      - /var/lib/postgresql/data/
+      - ./pg_data/:/var/lib/postgresql/data/
+    expose:
+      - "5433"
+    command: -p 5433
     env_file:
       - ./.env
+
   backend:
     build:
       context: ../backend/foodgram

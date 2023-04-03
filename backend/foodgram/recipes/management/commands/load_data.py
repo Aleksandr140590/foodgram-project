@@ -11,7 +11,7 @@ class Command(BaseCommand):
 
         print("Loading ingredients data")
         for row in DictReader(
-                open('recipes/data/ingredients.csv', encoding='utf-8')
+                open('/app/recipes/data/ingredients.csv', encoding='utf-8')
         ):
             try:
                 ingredient = Ingredient(
