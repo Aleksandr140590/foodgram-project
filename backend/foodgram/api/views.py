@@ -79,7 +79,7 @@ class IngredientViewSet(ListRetriveViewSet):
         if name_filter:
             return Ingredient.objects.filter(
                 name__istartswith=name_filter
-            ).all() | Ingredient.objects.filter(
+            ).all() + Ingredient.objects.filter(
                 name__icontains=name_filter
             ).all()
         return Ingredient.objects.all()
