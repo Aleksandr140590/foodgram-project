@@ -53,7 +53,7 @@ class TagAdmin(admin.ModelAdmin):
         'color',
         'slug'
     )
-    ordering = ('name', )
+    ordering = ('-name', )
 
 
 @admin.register(Ingredient)
