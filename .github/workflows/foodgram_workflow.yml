@@ -62,6 +62,7 @@ jobs:
           username: ${{ secrets.USER }}
           password: ${{ secrets.PASSWORD }}
           script: |
+            docker pull ${{ secrets.DOCKER_USERNAME }}/foodgram:v.0.1
             docker compose stop
             docker compose rm backend
             touch .env
