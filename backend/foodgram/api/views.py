@@ -81,7 +81,7 @@ class IngredientViewSet(ListRetriveViewSet):
                 name__istartswith=name_filter).annotate(rank=Value(1))
             queryset_2 = Ingredient.objects.filter(
                 name__icontains=name_filter).annotate(rank=Value(2))
-            return queryset_1.union(queryset_2).order_by('rank')
+            return queryset_1.union(queryset_2).order_by('rank')[:10]
         return Ingredient.objects.all()
 
 
