@@ -77,10 +77,11 @@ class IngredientViewSet(ListRetriveViewSet):
     def get_queryset(self):
         name_filter = self.request.query_params.get('name')
         if name_filter:
-            return Ingredient.objects.filter(
-                Q(name__istartswith=name_filter)
-                | Q(name__icontains=name_filter)
-            ).all()
+            queryset_1 = Ingredient.objects.filter(
+                name__istartswith=name_filter).annotate(rank=Value(1))
+            queryset_2 = Ingredient.objects.filter(
+                name__icontains=name_filter).annotate(rank=Value(2))
+            return queryset_1.union(queryset_2).order_by('rank')
         return Ingredient.objects.all()
 
 
