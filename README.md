@@ -4,9 +4,7 @@
 ![example event parameter](https://github.com/Aleksandr140590/foodgram-project-react/actions/workflows/foodgram_workflow.yml/badge.svg?event=push)
 
 Проект доступен по адресу: http://176.113.82.216/
-Данные для входа в админку:
-    e-mail: admin@admin.admin
-    pass: admin
+
 
 ## Описание проекта:
 
